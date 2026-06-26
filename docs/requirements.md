@@ -42,6 +42,11 @@ Both apps implement all of these; bar-helper must too.
 - **REQ-C09 — Profiles / presets.** Save and switch between named menu-bar layouts/configurations.
 - **REQ-C10 — Secondary reveal surface.** Offer an alternative to expanding the main bar — a separate
   strip/popover that lists hidden items (cf. Bartender Bar / Ice Bar) so the main bar stays uncluttered.
+- **REQ-C11 — Homebrew distribution.** bar-helper must be installable and updatable via **Homebrew** as a cask
+  (`brew install --cask bar-helper`), matching how both reference apps ship (`brew install --cask bartender`,
+  `brew install --cask jordanbaird-ice`). The cask must deliver a signed, notarized `.app`, support
+  `brew upgrade`, and clean up on `brew uninstall`. Homebrew is the primary distribution channel for the
+  developer audience these apps target.
 
 ## 4. Bartender's failures → differentiating requirements (SHOULD-HAVE)
 
@@ -86,7 +91,8 @@ Where Ice fell short — bar-helper must beat it.
 
 ## 7. Out of scope (for now) / open questions
 
-- Distribution/signing/notarization specifics, pricing/licensing model — TBD.
+- Primary distribution is Homebrew (REQ-C11); the signing/notarization pipeline and pricing/licensing model
+  are TBD.
 - Whether to pursue Mac App Store distribution (sandboxing likely conflicts with REQ-X02 permissions).
 - Multi-display / per-display menu-bar behavior — confirm priority.
 - Localization scope for v1.
