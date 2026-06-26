@@ -21,9 +21,12 @@ It's a free, native macOS app. **No accounts. No tracking. No analytics — ever
 
 ## Install
 
-bar-helper is distributed through [Homebrew](https://brew.sh):
+bar-helper is free and open source, released on [GitHub](https://github.com/) and installed through
+[Homebrew](https://brew.sh):
 
 ```bash
+# Add the tap once, then install:
+brew tap <owner>/tap
 brew install --cask bar-helper
 ```
 
@@ -33,16 +36,26 @@ To update later:
 brew upgrade --cask bar-helper
 ```
 
-> **Before the first public release:** the cask in this repo (`Casks/bar-helper.rb`) installs from a tap, e.g.
-> `brew install --cask <owner>/tap/bar-helper`. Once it's accepted into the main Homebrew cask repository, the
-> plain `brew install --cask bar-helper` above works.
->
-> bar-helper requires macOS 16 or later. It is built and tested against the latest macOS release.
+> Replace `<owner>` with this repo's GitHub account. bar-helper requires macOS 16 or later and is built and
+> tested against the latest macOS release.
 
-## First launch
+## Approve it on first launch
 
-The first time you open bar-helper, macOS will ask for two permissions. bar-helper explains each one when it
-asks:
+bar-helper is free and **not notarized by Apple** (that requires a paid developer account). Because of this,
+macOS Gatekeeper blocks it the first time you open it. This is expected — here's how to allow it:
+
+1. Open bar-helper once (macOS will block it).
+2. Go to **System Settings → Privacy & Security**, scroll down, and click **"Open Anyway"** next to bar-helper.
+
+Or clear the quarantine flag in one command (Homebrew prints this path too):
+
+```bash
+xattr -dr com.apple.quarantine /Applications/bar-helper.app
+```
+
+## Permissions
+
+The first time it runs, bar-helper asks for two permissions and explains each one when it asks:
 
 - **Screen Recording** — used to read your menu bar's layout and apply styling. **bar-helper does not record
   your screen.**

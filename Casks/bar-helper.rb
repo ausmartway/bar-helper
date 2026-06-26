@@ -28,6 +28,19 @@ cask "bar-helper" do
   # Quit the running agent before upgrading/uninstalling.
   uninstall quit: "app.barhelper.bar-helper"
 
+  # bar-helper is free and unsigned (no paid Apple Developer ID), so it is not
+  # notarized. macOS Gatekeeper asks you to confirm it once on first launch.
+  caveats <<~EOS
+    bar-helper is not notarized (it's free and ad-hoc signed). The first time
+    you open it, macOS will block it. To allow it:
+
+      Open it once, then go to
+        System Settings → Privacy & Security → "Open Anyway".
+
+    Or clear the quarantine flag in one command:
+      xattr -dr com.apple.quarantine "#{appdir}/bar-helper.app"
+  EOS
+
   # Remove preferences and saved state on `brew uninstall --zap`.
   zap trash: [
     "~/Library/Preferences/app.barhelper.bar-helper.plist",

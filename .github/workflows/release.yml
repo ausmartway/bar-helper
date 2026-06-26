@@ -1,9 +1,11 @@
-# Build, sign, notarize, and publish a bar-helper release, then update the
-# Homebrew cask (REQ-C11).
+# Build, package, and publish a free bar-helper release to GitHub, then update
+# the Homebrew cask (REQ-C11).
 #
-# Triggered by pushing a tag like `v0.1.0`. Signing/notarization run only when
-# the corresponding repository secrets are configured; without them the job
-# still builds and uploads an unsigned artifact so the pipeline is testable.
+# bar-helper is free and open source with no paid Apple Developer ID: the app
+# is ad-hoc signed (not notarized), and users clear Gatekeeper on first launch.
+# There are no signing secrets to configure — this workflow runs as-is.
+#
+# Triggered by pushing a tag like `v0.1.0`.
 name: Release
 
 on:
@@ -26,32 +28,7 @@ jobs:
       - name: Test
         run: swift test
 
-      # Import the Developer ID certificate when present (CI secret).
-      - name: Import signing certificate
-        if: ${{ secrets.MACOS_CERT_P12 != '' }}
-        env:
-          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
-          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
-        run: |
-          echo "$MACOS_CERT_P12" | base64 --decode > /tmp/cert.p12
-          security create-keychain -p ci build.keychain
-          security default-keychain -s build.keychain
-          security unlock-keychain -p ci build.keychain
-          security import /tmp/cert.p12 -k build.keychain -P "$MACOS_CERT_PASSWORD" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple: -s -k ci build.keychain
-
-      - name: Store notary credentials
-        if: ${{ secrets.NOTARY_APPLE_ID != '' }}
-        run: |
-          xcrun notarytool store-credentials bar-helper-notary \
-            --apple-id "${{ secrets.NOTARY_APPLE_ID }}" \
-            --team-id "${{ secrets.NOTARY_TEAM_ID }}" \
-            --password "${{ secrets.NOTARY_PASSWORD }}"
-
-      - name: Package
-        env:
-          CODESIGN_IDENTITY: ${{ secrets.CODESIGN_IDENTITY }}
-          NOTARY_PROFILE: ${{ secrets.NOTARY_APPLE_ID != '' && 'bar-helper-notary' || '' }}
+      - name: Package (ad-hoc signed)
         run: scripts/package-app.sh "${GITHUB_REF_NAME#v}"
 
       - name: Publish GitHub release
@@ -61,11 +38,17 @@ jobs:
             dist/bar-helper-*.zip
             dist/bar-helper-*.zip.sha256
 
-      # Update the in-repo cask's version + checksum to match the release.
+      # Update the in-repo cask's version + checksum to match the release, then
+      # commit it back to the default branch so `brew upgrade` sees the bump.
       - name: Update cask
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           SHA="$(awk '{print $1}' dist/bar-helper-${VERSION}.zip.sha256)"
           /usr/bin/sed -i '' -E "s/^  version \".*\"/  version \"${VERSION}\"/" Casks/bar-helper.rb
           /usr/bin/sed -i '' -E "s/^  sha256 \".*\"/  sha256 \"${SHA}\"/" Casks/bar-helper.rb
-          echo "Updated Casks/bar-helper.rb to ${VERSION} (${SHA})"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Casks/bar-helper.rb
+          git commit -m "cask: bar-helper ${VERSION}" || { echo "no cask change"; exit 0; }
+          # Tags are cut from main, so the new cask commit fast-forwards main.
+          git push origin HEAD:main

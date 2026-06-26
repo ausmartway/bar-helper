@@ -42,11 +42,14 @@ Both apps implement all of these; bar-helper must too.
 - **REQ-C09 — Profiles / presets.** Save and switch between named menu-bar layouts/configurations.
 - **REQ-C10 — Secondary reveal surface.** Offer an alternative to expanding the main bar — a separate
   strip/popover that lists hidden items (cf. Bartender Bar / Ice Bar) so the main bar stays uncluttered.
-- **REQ-C11 — Homebrew distribution.** bar-helper must be installable and updatable via **Homebrew** as a cask
-  (`brew install --cask bar-helper`), matching how both reference apps ship (`brew install --cask bartender`,
-  `brew install --cask jordanbaird-ice`). The cask must deliver a signed, notarized `.app`, support
-  `brew upgrade`, and clean up on `brew uninstall`. Homebrew is the primary distribution channel for the
-  developer audience these apps target.
+- **REQ-C11 — Free distribution via GitHub + Homebrew.** bar-helper is free and open source and must be
+  installable/updatable via **Homebrew** as a cask (`brew install --cask bar-helper`), matching how the
+  reference apps ship (e.g. `brew install --cask jordanbaird-ice`). The cask downloads a zipped `.app` from
+  **GitHub Releases**, supports `brew upgrade`, and cleans up on `brew uninstall`/`--zap`. The app is
+  distributed **without a paid Apple Developer ID**: it is **ad-hoc signed** (required to launch on Apple
+  Silicon) but **not notarized**, so the cask and README must clearly document the one-time macOS Gatekeeper
+  approval (System Settings → Privacy & Security → "Open Anyway", or clearing the quarantine flag). No paid
+  signing/notarization is in scope.
 
 ## 4. Bartender's failures → differentiating requirements (SHOULD-HAVE)
 
@@ -91,9 +94,10 @@ Where Ice fell short — bar-helper must beat it.
 
 ## 7. Out of scope (for now) / open questions
 
-- Primary distribution is Homebrew (REQ-C11); the signing/notarization pipeline and pricing/licensing model
-  are TBD.
-- Whether to pursue Mac App Store distribution (sandboxing likely conflicts with REQ-X02 permissions).
+- Distribution is decided: free, open source, GitHub Releases + Homebrew cask, ad-hoc signed, not notarized
+  (REQ-C11). The app is free — there is no pricing/licensing model.
+- Whether to pursue Mac App Store distribution (sandboxing likely conflicts with REQ-X02 permissions, and the
+  app is intentionally unsigned/free).
 - Multi-display / per-display menu-bar behavior — confirm priority.
 - Localization scope for v1.
 
