@@ -1,0 +1,19 @@
+# macOS
+.DS_Store
+
+# Xcode / Swift build artifacts
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+.swiftpm/
+.build/
+Packages/
+
+# Credentials — never commit
+.env
+*.env
+
+# Editor
+.idea/
+*.swp

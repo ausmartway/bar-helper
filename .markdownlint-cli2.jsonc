@@ -1,0 +1,8 @@
+{
+  // Prose and reference URLs wrap past 80 cols intentionally; disable the
+  // fixed line-length rule but keep all other markdownlint checks.
+  "config": {
+    "default": true,
+    "MD013": false
+  }
+}
