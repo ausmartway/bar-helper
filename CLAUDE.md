@@ -10,9 +10,8 @@ MVP-first. The product spec lives in [`docs/requirements.md`](docs/requirements.
 source of truth for *what* to build and the rationale behind each requirement. This file covers *how* to work
 in the repo.
 
-> Status: greenfield. Only `CLAUDE.md` and `docs/requirements.md` exist so far. The Xcode/SwiftPM project has
-> not been scaffolded yet — the build/test commands below are the intended toolchain and must be finalized
-> (replacing the `TODO` markers) by the session that creates the project.
+> Status: scaffolded as a SwiftPM executable (`bar-helper`). Source lives in `Sources/BarHelper`, tests in
+> `Tests/BarHelperTests`. The build/test commands below are real.
 
 ## Stack & baseline
 
@@ -28,30 +27,34 @@ in the repo.
 
 ## Build / run / test commands
 
-> Replace `TODO` placeholders once the project is scaffolded. Prefer an Xcode project + `xcodebuild`; if the
-> project is SwiftPM-based, swap in the `swift` equivalents.
+The package is a SwiftPM executable; build and run everything from the CLI.
 
 ```bash
 # Build (Debug)
-xcodebuild -scheme bar-helper -configuration Debug build          # TODO: confirm scheme name
+swift build
 
-# Run: build, then launch the produced .app (it appears only in the menu bar, not the Dock)
-open <DerivedData>/Build/Products/Debug/bar-helper.app            # TODO: or `swift run`
+# Run the menu-bar agent (appears in the menu bar, not the Dock)
+swift run bar-helper
+# ...or run the built binary directly:
+"$(swift build --show-bin-path)/bar-helper"
 
 # Test (all)
-xcodebuild test -scheme bar-helper -destination 'platform=macOS'
+swift test
 
-# Test (single test or single class)
-xcodebuild test -scheme bar-helper -destination 'platform=macOS' \
-  -only-testing:bar-helperTests/MenuBarManagerTests/testSeparatorExpandHidesItems
+# Test (a single case or whole suite)
+swift test --filter BarHelperTests.ModelTests/testUndoRedoRoundTrip
+swift test --filter BarHelperTests.ModelTests
 
-# Format & lint (Swift)
-swift format --in-place --recursive Sources                       # or: swiftlint --fix
-swiftlint
+# Format & lint
+swift format --in-place --recursive Sources Tests   # or: swiftlint --fix
+markdownlint-cli2 "**/*.md"                          # docs lint (config in repo)
 ```
 
 For non-Swift files (Markdown/YAML/JSON), this user's global tooling prefers `prettier`, `markdownlint-cli2`,
 and `jq`/`fx`.
+
+> Note: model/store logic is covered by headless unit tests; the menu-bar manipulation and SwiftUI panes
+> require a live GUI session and Screen Recording / Accessibility grants to exercise fully.
 
 ## Architecture (the big picture)
 
@@ -80,6 +83,22 @@ Read these pieces together to understand the system:
 Because none of the menu-bar manipulation rests on public API, it is **fragile across macOS updates**.
 Validate against the latest macOS beta early; treat OS-version regressions as release-blocking (see
 `docs/requirements.md`).
+
+## Where things live (requirement → source)
+
+The spec's `REQ-` IDs map onto the source so you can navigate by feature:
+
+- Sections + expand-to-hide (REQ-C01): `MenuBar/MenuBarSection.swift`, `MenuBar/Separator.swift`,
+  `MenuBar/MenuBarManager.swift`
+- Reveal triggers + auto-rehide (REQ-C02/C03): `MenuBar/RevealController.swift`
+- Arrange / search / styling / profiles / hotkeys UI (REQ-C04..C09): `UI/SettingsView.swift`
+- Secondary hidden-items bar (REQ-C10): `MenuBar/HiddenItemsPanel.swift`
+- Hotkeys engine (REQ-C07): `Hotkeys/`
+- Launch at login (REQ-C08): `Login/LaunchAtLogin.swift`
+- Profiles + persistence + undo/redo (REQ-C09/I03/I04): `Settings/SettingsStore.swift`
+- No telemetry (REQ-B01): `Privacy/Telemetry.swift`
+- Permissions flow (REQ-I05/X02): `Permissions/PermissionsManager.swift`
+- Primary control item/menu: `MenuBar/ControlItem.swift`
 
 ## Conventions & non-negotiables
 
