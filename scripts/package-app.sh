@@ -76,7 +76,7 @@ rm -f "${ZIP}"
 /usr/bin/ditto -c -k --keepParent "${APP_DIR}" "${ZIP}"
 
 # --- Checksum --------------------------------------------------------------
-echo "==> Computing SHA-256 (paste into Casks/bar-helper.rb)"
+echo "==> Computing SHA-256 (paste into the tap: ausmartway/homebrew-tap Casks/bar-helper.rb)"
 shasum -a 256 "${ZIP}" | tee "${ZIP}.sha256"
 
 echo "==> Done. Artifacts in ${DIST}/"

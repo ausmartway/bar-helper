@@ -1,9 +1,11 @@
-# Build, package, and publish a free bar-helper release to GitHub, then update
-# the Homebrew cask (REQ-C11).
+# Build, package, and publish a free bar-helper release to GitHub, then (if a
+# tap token is configured) bump the Homebrew cask in ausmartway/homebrew-tap.
 #
 # bar-helper is free and open source with no paid Apple Developer ID: the app
 # is ad-hoc signed (not notarized), and users clear Gatekeeper on first launch.
-# There are no signing secrets to configure — this workflow runs as-is.
+# Packaging needs no secrets. The cask bump is OPTIONAL — it runs only when the
+# HOMEBREW_TAP_TOKEN secret (a PAT with `repo` scope on the tap) is present, so
+# the very first release works with zero extra setup.
 #
 # Triggered by pushing a tag like `v0.1.0`.
 name: Release
@@ -38,17 +40,29 @@ jobs:
             dist/bar-helper-*.zip
             dist/bar-helper-*.zip.sha256
 
-      # Update the in-repo cask's version + checksum to match the release, then
-      # commit it back to the default branch so `brew upgrade` sees the bump.
-      - name: Update cask
+      - name: Report cask values
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           SHA="$(awk '{print $1}' dist/bar-helper-${VERSION}.zip.sha256)"
-          /usr/bin/sed -i '' -E "s/^  version \".*\"/  version \"${VERSION}\"/" Casks/bar-helper.rb
-          /usr/bin/sed -i '' -E "s/^  sha256 \".*\"/  sha256 \"${SHA}\"/" Casks/bar-helper.rb
+          echo "Cask version: ${VERSION}"
+          echo "Cask sha256:  ${SHA}"
+
+      # Optional: push the version/sha256 bump into the tap repo. Requires a
+      # HOMEBREW_TAP_TOKEN secret (PAT with repo scope on ausmartway/homebrew-tap).
+      - name: Update tap cask
+        if: ${{ secrets.HOMEBREW_TAP_TOKEN != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          SHA="$(awk '{print $1}' dist/bar-helper-${VERSION}.zip.sha256)"
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/ausmartway/homebrew-tap.git" tap
+          CASK="tap/Casks/bar-helper.rb"
+          /usr/bin/sed -i '' -E "s/^  version \".*\"/  version \"${VERSION}\"/" "${CASK}"
+          /usr/bin/sed -i '' -E "s/^  sha256 \".*\"/  sha256 \"${SHA}\"/" "${CASK}"
+          cd tap
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add Casks/bar-helper.rb
-          git commit -m "cask: bar-helper ${VERSION}" || { echo "no cask change"; exit 0; }
-          # Tags are cut from main, so the new cask commit fast-forwards main.
+          git commit -m "bar-helper ${VERSION}" || { echo "no cask change"; exit 0; }
           git push origin HEAD:main

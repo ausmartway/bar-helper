@@ -26,7 +26,7 @@ bar-helper is free and open source, released on [GitHub](https://github.com/) an
 
 ```bash
 # Add the tap once, then install:
-brew tap <owner>/tap
+brew tap ausmartway/tap
 brew install --cask bar-helper
 ```
 
@@ -36,8 +36,8 @@ To update later:
 brew upgrade --cask bar-helper
 ```
 
-> Replace `<owner>` with this repo's GitHub account. bar-helper requires macOS 16 or later and is built and
-> tested against the latest macOS release.
+> bar-helper requires macOS 16 or later and is built and tested against the latest macOS release. The tap lives
+> at [ausmartway/homebrew-tap](https://github.com/ausmartway/homebrew-tap).
 
 ## Approve it on first launch
 
