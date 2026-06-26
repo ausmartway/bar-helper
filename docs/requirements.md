@@ -81,7 +81,64 @@ Where Ice fell short — bar-helper must beat it.
   that explains *why* each is needed, states the screen is not recorded, avoids repeated re-prompting, and
   offers a usable **degraded mode** when permissions are absent.
 
-## 6. Constraints & permissions
+## 6. Additional functions (Bartender/Ice feature review)
+
+> Added 2026-06-26 from reviewing the published feature inventories of Bartender (macbartender.com) and Ice
+> (icemenubar.app + the Ice GitHub README). The browser extension was unavailable for live screenshots, so
+> these were derived from each app's own feature documentation. Priority tags: **MUST** = both apps ship it;
+> **SHOULD** = valuable and at least one app ships it; **FUTURE** = both list it as upcoming.
+
+### Layout & grouping
+
+- **REQ-C12 — Item spacing control (MUST).** Adjust/reduce the spacing between menu bar items (cf. the macOS
+  `NSStatusItemSpacing` / `NSStatusItemSelectionPadding` defaults). *(Bartender "control spacing"; Ice "menu bar
+  item spacing".)*
+- **REQ-C13 — Spacers (SHOULD).** Insert custom spacer items to visually group icons, optionally labeled with
+  text or an emoji. *(Bartender spacers with labels/emoji; Ice planned "individual spacer items".)*
+- **REQ-C14 — Item grouping (SHOULD).** Combine multiple menu bar items into a single grouped control. *(Bartender
+  groups; Ice planned "menu bar item grouping".)*
+- **REQ-C15 — Default placement for new items (SHOULD).** Choose whether newly appearing items default to the
+  shown or hidden section; optionally swap shown↔hidden to save space on small screens. *(Bartender.)*
+
+### Reveal, hotkeys & application-menu handling
+
+- **REQ-C16 — Per-item hotkeys & temporary reveal (MUST).** Assign a hotkey to show/activate a specific menu bar
+  item, and temporarily reveal a single hidden item without permanently un-hiding it. Extends REQ-C07.
+  *(Bartender per-item hotkeys; Ice planned "temporary individual item display hotkeys".)*
+- **REQ-C17 — Hide overlapping application menus (MUST).** When revealing hidden items would overlap the active
+  app's menu titles, hide or shift those menus so items stay clickable; provide a hotkey to toggle the
+  application menus. *(Both apps.)*
+- **REQ-C18 — Expanded hotkey actions (SHOULD).** Beyond section toggles + search (REQ-C07): toggle the secondary
+  bar (REQ-C10), show/hide the separator/divider icons, toggle application menus, and control auto-rehide. *(Ice.)*
+
+### Appearance (extends REQ-C05)
+
+- **REQ-C19 — Custom separator/control icon (SHOULD).** Customize the divider/control item icon and show/hide the
+  divider icons. *(Both apps.)*
+- **REQ-C20 — Per-display / per-Space / appearance-aware styling (SHOULD).** Apply distinct menu bar styling per
+  display, Space, or workspace (to recognize context at a glance), plus light/dark-mode-specific styling. Resolves
+  the earlier multi-display open question. *(Bartender per-workspace styling; Ice planned light/dark settings.)*
+- **REQ-C21 — Screen-edge styling (SHOULD).** Rounded screen-corner customization and background removal/black-out
+  behind the menu bar. *(Bartender rounded corners / black area; Ice planned background removal + rounded corners.)*
+
+### Automation & triggers (Bartender-strong)
+
+- **REQ-A01 — Conditional triggers (SHOULD).** Rules that show/hide items or switch presets/profiles based on
+  conditions — battery (on battery / charging / level), Wi-Fi or specific network, location, schedule (time/date),
+  and macOS Focus mode — with conditions combinable. *(Bartender's signature automation; Ice planned "conditional
+  item visibility triggers".)*
+- **REQ-A02 — Temporary reveal on activity (SHOULD).** Briefly reveal a hidden item when its icon updates or
+  changes (e.g. a download completing), then re-hide it. *(Bartender "show for updates".)*
+- **REQ-A03 — Scripting & Shortcuts (SHOULD).** Expose show/activate-item and apply-preset actions to AppleScript
+  and/or the Shortcuts app for user automation. *(Bartender AppleScript support.)*
+
+### Future / explicitly deferred
+
+- **REQ-F01 — Menu bar widgets (FUTURE).** Custom menu bar widgets. *(Both apps list this as upcoming.)*
+- **REQ-F02 — In-app update awareness (FUTURE).** Update delivery is handled by Homebrew (REQ-C11); an optional
+  in-app "update available" notice may be added later. *(Ice ships an auto-updater; bar-helper defers to brew.)*
+
+## 7. Constraints & permissions
 
 - **REQ-X01 — Platform.** Swift + AppKit/SwiftUI; macOS 16+ baseline with **macOS 26 "Tahoe" as the primary
   validation target** (its under-the-hood menu-bar changes broke both reference apps).
@@ -92,20 +149,22 @@ Where Ice fell short — bar-helper must beat it.
   **inherently fragile across OS updates** — this fragility must be actively managed (early beta testing,
   regression tests) rather than assumed away.
 
-## 7. Out of scope (for now) / open questions
+## 8. Out of scope (for now) / open questions
 
 - Distribution is decided: free, open source, GitHub Releases + Homebrew cask, ad-hoc signed, not notarized
   (REQ-C11). The app is free — there is no pricing/licensing model.
 - Whether to pursue Mac App Store distribution (sandboxing likely conflicts with REQ-X02 permissions, and the
   app is intentionally unsigned/free).
-- Multi-display / per-display menu-bar behavior — confirm priority.
+- Menu bar widgets are deferred (REQ-F01); in-app update checks defer to Homebrew (REQ-F02).
 - Localization scope for v1.
 
-## 8. References
+## 9. References
 
 - Ice — source & README: <https://github.com/jordanbaird/Ice> · <https://github.com/jordanbaird/Ice/blob/main/README.md>
+- Ice — feature list: <https://icemenubar.app/>
 - Ice — Tahoe beta fix (mis-tinted icons): <https://micro.webology.dev/2026/02/19/jordan-bairds-ice-beta-fixed/>
 - Bartender — official site: <https://www.macbartender.com/>
+- Bartender — feature list (Bartender 5): <https://www.macbartender.com/Bartender5/>
 - Bartender — macOS 26 lag/instability: <https://www.heise.de/en/news/macOS-26-Lag-and-other-issues-with-menu-bar-tool-Bartender-6-11167978.html>
 - Bartender — 2024 acquisition + telemetry reporting: <https://appleinsider.com/articles/24/06/05/bartender-apps-new-owner-has-burnt-years-of-good-will-with-a-lack-of-transparency> · <https://tidbits.com/2024/06/05/bartender-developer-explains-and-apologizes-for-quiet-acquisition/>
 - Apple — `NSStatusBar` / `NSStatusItem`: <https://developer.apple.com/documentation/appkit/nsstatusbar> · <https://developer.apple.com/documentation/appkit/nsstatusitem>
