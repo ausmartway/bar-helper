@@ -50,11 +50,20 @@ struct SettingsView: View {
             SectionsPane(settings: settings)
                 .tabItem { Label("Sections", systemImage: "rectangle.split.3x1") }
 
+            LayoutPane(settings: settings)
+                .tabItem { Label("Layout", systemImage: "ruler") }
+
             AppearancePane(settings: settings)
                 .tabItem { Label("Appearance", systemImage: "paintbrush") }
 
             HotkeysPane(settings: settings)
                 .tabItem { Label("Hotkeys", systemImage: "command") }
+
+            TriggersPane(settings: settings)
+                .tabItem { Label("Triggers", systemImage: "bolt") }
+
+            AutomationPane(settings: settings)
+                .tabItem { Label("Automation", systemImage: "terminal") }
 
             ProfilesPane(settings: settings)
                 .tabItem { Label("Profiles", systemImage: "person.crop.rectangle.stack") }
@@ -228,6 +237,35 @@ private struct AppearancePane: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+
+            // REQ-C19: separator/divider icon customization.
+            Section("Separator icons") {
+                Toggle("Show divider icons", isOn: bind(\.appearance.showDividerIcons))
+                Picker("Separator symbol", selection: bind(\.appearance.separatorIconSymbol)) {
+                    Text("Chevron").tag("chevron.left")
+                    Text("Ellipsis").tag("ellipsis")
+                    Text("Circle").tag("circle.fill")
+                    Text("Line").tag("line.diagonal")
+                }
+                .disabled(!settings.profile.appearance.showDividerIcons)
+            }
+
+            // REQ-C21: screen-edge styling.
+            Section("Screen edges") {
+                Toggle("Rounded screen corners", isOn: bind(\.appearance.roundedScreenCorners))
+                Toggle("Remove background behind menu bar", isOn: bind(\.appearance.backgroundRemoval))
+            }
+
+            // REQ-C20: light/dark + per-display styling.
+            Section("Light / Dark & displays") {
+                Toggle("Separate dark-mode appearance", isOn: Binding(
+                    get: { settings.profile.darkAppearance != nil },
+                    set: { on in
+                        settings.update { $0.darkAppearance = on ? $0.appearance : nil }
+                    }
+                ))
+                Toggle("Distinct styling per display / Space", isOn: bind(\.perDisplayStyling))
+            }
         }
         .formStyle(.grouped)
         .padding()
@@ -238,6 +276,185 @@ private struct AppearancePane: View {
             get: { settings.profile[keyPath: keyPath] },
             set: { newValue in settings.update { $0[keyPath: keyPath] = newValue } }
         )
+    }
+}
+
+// MARK: - Layout (REQ-C12/C13/C14/C15)
+
+private struct LayoutPane: View {
+    @ObservedObject var settings: SettingsStore
+    @State private var newSpacerLabel = ""
+    @State private var newGroupName = ""
+
+    var body: some View {
+        Form {
+            Section("Item spacing") {
+                Slider(value: Binding(
+                    get: { Double(settings.profile.layout.itemSpacing) },
+                    set: { newValue in settings.update { $0.layout.itemSpacing = Int(newValue) } }
+                ), in: 0...24, step: 1) { Text("Spacing") }
+                Text("\(settings.profile.layout.itemSpacing)pt between items — applies after the menu bar restarts.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section("New items") {
+                Picker("Default section for new items", selection: Binding(
+                    get: { settings.profile.layout.defaultSectionForNewItems },
+                    set: { newValue in settings.update { $0.layout.defaultSectionForNewItems = newValue } }
+                )) {
+                    ForEach(MenuBarSection.allCases) { Text($0.displayName).tag($0) }
+                }
+                Toggle("Swap shown/hidden on small screens", isOn: Binding(
+                    get: { settings.profile.layout.swapShownHiddenOnSmallScreen },
+                    set: { v in settings.update { $0.layout.swapShownHiddenOnSmallScreen = v } }
+                ))
+            }
+
+            Section("Spacers") {
+                ForEach(settings.profile.spacers) { spacer in
+                    HStack {
+                        Text(spacer.label.isEmpty ? "(blank spacer)" : spacer.label)
+                        Spacer()
+                        Text(spacer.section.displayName).foregroundStyle(.secondary)
+                        Button(role: .destructive) {
+                            settings.update { p in p.spacers.removeAll { $0.id == spacer.id } }
+                        } label: { Image(systemName: "trash") }
+                        .buttonStyle(.borderless)
+                    }
+                }
+                HStack {
+                    TextField("Spacer label or emoji", text: $newSpacerLabel)
+                        .textFieldStyle(.roundedBorder)
+                    Button("Add spacer") {
+                        settings.update { $0.spacers.append(MenuBarSpacer(label: newSpacerLabel, section: .hidden)) }
+                        newSpacerLabel = ""
+                    }
+                }
+            }
+
+            Section("Groups") {
+                ForEach(settings.profile.groups) { group in
+                    HStack {
+                        Text(group.name)
+                        Spacer()
+                        Text("\(group.itemIDs.count) items").foregroundStyle(.secondary)
+                        Button(role: .destructive) {
+                            settings.update { p in p.groups.removeAll { $0.id == group.id } }
+                        } label: { Image(systemName: "trash") }
+                        .buttonStyle(.borderless)
+                    }
+                }
+                HStack {
+                    TextField("New group name", text: $newGroupName)
+                        .textFieldStyle(.roundedBorder)
+                    Button("Add group") {
+                        let trimmed = newGroupName.trimmingCharacters(in: .whitespaces)
+                        guard !trimmed.isEmpty else { return }
+                        settings.update { $0.groups.append(ItemGroup(name: trimmed)) }
+                        newGroupName = ""
+                    }
+                    .disabled(newGroupName.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .padding()
+    }
+}
+
+// MARK: - Triggers (REQ-A01)
+
+private struct TriggersPane: View {
+    @ObservedObject var settings: SettingsStore
+    @State private var newName = ""
+    @State private var newKind: TriggerCondition.Kind = .onBattery
+
+    var body: some View {
+        VStack(alignment: .leading) {
+            Text("Automation triggers")
+                .font(.headline)
+            Text("Show, hide, or switch profiles automatically when a condition is met.")
+                .font(.caption).foregroundStyle(.secondary)
+
+            List {
+                ForEach(settings.profile.triggers) { trigger in
+                    HStack {
+                        Toggle("", isOn: Binding(
+                            get: { trigger.enabled },
+                            set: { v in settings.update { p in
+                                if let i = p.triggers.firstIndex(where: { $0.id == trigger.id }) { p.triggers[i].enabled = v }
+                            } }
+                        )).labelsHidden()
+                        VStack(alignment: .leading) {
+                            Text(trigger.name)
+                            Text("\(trigger.condition.kind.displayName) → \(trigger.action.kind.displayName)")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Button(role: .destructive) {
+                            settings.update { p in p.triggers.removeAll { $0.id == trigger.id } }
+                        } label: { Image(systemName: "trash") }
+                        .buttonStyle(.borderless)
+                    }
+                }
+            }
+
+            HStack {
+                TextField("Trigger name", text: $newName)
+                    .textFieldStyle(.roundedBorder)
+                Picker("", selection: $newKind) {
+                    ForEach(TriggerCondition.Kind.allCases) { Text($0.displayName).tag($0) }
+                }.labelsHidden().frame(width: 150)
+                Button("Add") {
+                    let trimmed = newName.trimmingCharacters(in: .whitespaces)
+                    guard !trimmed.isEmpty else { return }
+                    let condition = TriggerCondition(kind: newKind, batteryThreshold: 20,
+                                                     scheduleStartHour: 9, scheduleEndHour: 17)
+                    settings.update {
+                        $0.triggers.append(Trigger(name: trimmed, condition: condition,
+                                                   action: TriggerAction(kind: .hideItems)))
+                    }
+                    newName = ""
+                }
+                .disabled(newName.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+        }
+        .padding()
+    }
+}
+
+// MARK: - Automation (REQ-A02/A03)
+
+private struct AutomationPane: View {
+    @ObservedObject var settings: SettingsStore
+
+    var body: some View {
+        Form {
+            Section("Behavior") {
+                Toggle("Briefly reveal an item when it updates", isOn: Binding(
+                    get: { settings.profile.automation.temporaryRevealOnActivity },
+                    set: { v in settings.update { $0.automation.temporaryRevealOnActivity = v } }
+                ))
+                Toggle("Hide app menus that overlap revealed items", isOn: Binding(
+                    get: { settings.profile.hideOverlappingAppMenus },
+                    set: { v in settings.update { $0.hideOverlappingAppMenus = v } }
+                ))
+            }
+
+            Section("Scripting (REQ-A03)") {
+                Toggle("Enable barhelper:// URL scheme", isOn: Binding(
+                    get: { settings.profile.automation.urlSchemeEnabled },
+                    set: { v in settings.update { $0.automation.urlSchemeEnabled = v } }
+                ))
+                Text("Drive bar-helper from AppleScript or Shortcuts, e.g.:")
+                    .font(.caption).foregroundStyle(.secondary)
+                Text("open location \"barhelper://toggle?section=hidden\"")
+                    .font(.system(.caption, design: .monospaced))
+                    .textSelection(.enabled)
+            }
+        }
+        .formStyle(.grouped)
+        .padding()
     }
 }
 

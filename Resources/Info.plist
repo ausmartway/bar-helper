@@ -33,5 +33,18 @@
 	<string>bar-helper reads your menu bar layout to hide and style items. It does not record your screen.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>bar-helper is free and open source. No telemetry, ever.</string>
+	<!-- barhelper:// automation URL scheme (REQ-A03) — drivable from AppleScript
+	     (open location) and the Shortcuts app. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>app.barhelper.bar-helper</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>barhelper</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

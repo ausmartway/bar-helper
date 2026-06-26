@@ -12,13 +12,27 @@ struct Appearance: Codable, Equatable {
     /// Corner radius applied to the styled menu-bar region.
     var cornerRadius: Double
 
+    /// SF Symbol name used for the section separators/chevrons (REQ-C19).
+    var separatorIconSymbol: String
+    /// Whether the divider/chevron icons are shown at all (REQ-C19).
+    var showDividerIcons: Bool
+
+    /// Round the screen's bottom-of-menu-bar corners (REQ-C21).
+    var roundedScreenCorners: Bool
+    /// Remove/black-out the wallpaper showing behind the menu bar (REQ-C21).
+    var backgroundRemoval: Bool
+
     static var `default`: Appearance {
         Appearance(
             tint: nil,
             hasBorder: false,
             borderColor: RGBAColor(white: 0, alpha: 0.25),
             hasShadow: true,
-            cornerRadius: 0
+            cornerRadius: 0,
+            separatorIconSymbol: "chevron.left",
+            showDividerIcons: true,
+            roundedScreenCorners: false,
+            backgroundRemoval: false
         )
     }
 }

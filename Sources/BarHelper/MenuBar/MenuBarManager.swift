@@ -28,6 +28,9 @@ final class MenuBarManager: ObservableObject {
     /// Optional Ice-Bar-style popover listing hidden items (REQ-C10).
     private lazy var barPanel = HiddenItemsPanel(settings: settings)
 
+    /// Hides the active app's menus when revealed items overlap them (REQ-C17).
+    let appMenuManager = AppMenuManager()
+
     @Published private(set) var revealedSection: MenuBarSection?
 
     private var cancellables = Set<AnyCancellable>()
@@ -53,13 +56,29 @@ final class MenuBarManager: ObservableObject {
             }
         }
         // Start in the tidy state: everything hidden.
+        applyProfileSettings()
         hideAll()
         revealController.start()
 
         // React to profile/reveal-setting changes without duplicating state.
         settings.objectWillChange
-            .sink { [weak self] in self?.revealController.reloadSettings() }
+            .sink { [weak self] in
+                self?.revealController.reloadSettings()
+                self?.applyProfileSettings()
+            }
             .store(in: &cancellables)
+    }
+
+    /// Push profile-driven settings into the AppKit collaborators
+    /// (REQ-C12/C17/C19).
+    private func applyProfileSettings() {
+        appMenuManager.isEnabled = settings.profile.hideOverlappingAppMenus
+        SpacingManager.apply(spacing: settings.profile.layout.itemSpacing)
+        let appearance = settings.profile.appearance
+        for separator in separators.values {
+            separator.setIcon(symbol: appearance.separatorIconSymbol,
+                              visible: appearance.showDividerIcons)
+        }
     }
 
     func stop() {
@@ -86,6 +105,7 @@ final class MenuBarManager: ObservableObject {
         revealedSection = section
         separators[.hidden]?.setRevealed(true)
         separators[.alwaysHidden]?.setRevealed(section == .alwaysHidden)
+        appMenuManager.itemsRevealed() // REQ-C17
         revealController.scheduleAutoRehide()
     }
 
@@ -93,6 +113,7 @@ final class MenuBarManager: ObservableObject {
         revealedSection = nil
         separators[.hidden]?.setRevealed(false)
         separators[.alwaysHidden]?.setRevealed(false)
+        appMenuManager.itemsHidden() // REQ-C17
         revealController.cancelAutoRehide()
     }
 

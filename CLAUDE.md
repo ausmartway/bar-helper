@@ -122,6 +122,16 @@ The spec's `REQ-` IDs map onto the source so you can navigate by feature:
 - No telemetry (REQ-B01): `Privacy/Telemetry.swift`
 - Permissions flow (REQ-I05/X02): `Permissions/PermissionsManager.swift`
 - Primary control item/menu: `MenuBar/ControlItem.swift`
+- Layout: spacing, spacers, groups, default placement (REQ-C12/C13/C14/C15): `Settings/LayoutSettings.swift`,
+  `MenuBar/SpacingManager.swift`
+- Per-item hotkeys + expanded hotkey actions (REQ-C16/C18): `Settings/LayoutSettings.swift` (`ItemHotkey`),
+  `Hotkeys/HotkeyBinding.swift`, `AppDelegate.swift`
+- Overlapping app-menu handling (REQ-C17): `MenuBar/AppMenuManager.swift`
+- Separator icon / screen-edge / light-dark styling (REQ-C19/C20/C21): `Settings/Appearance.swift`,
+  `MenuBar/Separator.swift`, `Settings/Profile.swift`
+- Triggers + automation (REQ-A01/A02/A03): `Automation/Trigger.swift`, `Automation/TriggerEngine.swift`,
+  `Automation/SystemState.swift`, `Automation/URLSchemeHandler.swift`
+- New settings UI (Layout, Triggers, Automation panes): `UI/SettingsView.swift`
 
 ## Conventions & non-negotiables
 

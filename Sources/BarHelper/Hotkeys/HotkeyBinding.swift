@@ -7,6 +7,11 @@ enum HotkeyAction: String, Codable, CaseIterable, Identifiable {
     case toggleAlwaysHidden
     case openSettings
     case search
+    // Expanded actions (REQ-C18).
+    case toggleSecondaryBar
+    case toggleSeparatorIcons
+    case toggleAppMenus
+    case toggleAutoRehide
 
     var id: String { rawValue }
 
@@ -16,6 +21,10 @@ enum HotkeyAction: String, Codable, CaseIterable, Identifiable {
         case .toggleAlwaysHidden: return "Toggle Always-Hidden Items"
         case .openSettings: return "Open Settings"
         case .search: return "Search Menu Bar Items"
+        case .toggleSecondaryBar: return "Toggle Hidden Items Bar"
+        case .toggleSeparatorIcons: return "Show/Hide Separator Icons"
+        case .toggleAppMenus: return "Toggle Application Menus"
+        case .toggleAutoRehide: return "Toggle Auto-Rehide"
         }
     }
 }

@@ -26,8 +26,42 @@ struct Profile: Codable, Identifiable, Equatable {
     /// Launch at login (REQ-C08).
     var launchAtLogin: Bool
 
+    /// Layout: spacing + default placement (REQ-C12 / REQ-C15).
+    var layout: LayoutSettings = .default
+
+    /// Custom spacer items (REQ-C13).
+    var spacers: [MenuBarSpacer] = []
+
+    /// Grouped items (REQ-C14).
+    var groups: [ItemGroup] = []
+
+    /// Per-item hotkeys + temporary reveal (REQ-C16).
+    var itemHotkeys: [ItemHotkey] = []
+
+    /// Automation triggers (REQ-A01).
+    var triggers: [Trigger] = []
+
+    /// Automation surface toggles (REQ-A02 / REQ-A03).
+    var automation: AutomationSettings = .default
+
+    /// Hide the active app's menus when revealed items overlap them (REQ-C17).
+    var hideOverlappingAppMenus: Bool = false
+
+    /// Optional dark-mode appearance override (REQ-C20). When nil, `appearance`
+    /// is used in both light and dark.
+    var darkAppearance: Appearance?
+
+    /// Apply distinct styling per display/Space (REQ-C20). Full per-display
+    /// mapping is a follow-up; this flag gates the behavior.
+    var perDisplayStyling: Bool = false
+
     func section(for itemID: String) -> MenuBarSection {
         sectionAssignments[itemID] ?? .visible
+    }
+
+    /// The appearance to use for the given interface style (REQ-C20).
+    func appearance(forDarkMode isDark: Bool) -> Appearance {
+        (isDark ? darkAppearance : nil) ?? appearance
     }
 
     static var `default`: Profile {

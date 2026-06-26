@@ -77,6 +77,15 @@ final class SettingsStore: ObservableObject {
         persist()
     }
 
+    /// Switch by profile name (used by triggers and the URL scheme). No-op if
+    /// no profile matches.
+    func switchTo(named name: String) {
+        guard let match = profiles.first(where: {
+            $0.name.caseInsensitiveCompare(name) == .orderedSame
+        }) else { return }
+        switchTo(match.id)
+    }
+
     func deleteProfile(_ id: UUID) {
         guard profiles.count > 1 else { return } // always keep one
         captureHistory()

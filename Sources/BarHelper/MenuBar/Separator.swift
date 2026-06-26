@@ -23,6 +23,10 @@ final class Separator {
     private let statusItem: NSStatusItem
     private var onClick: (() -> Void)?
 
+    /// Divider icon styling (REQ-C19).
+    private var iconSymbol = "chevron.left"
+    private var iconsVisible = true
+
     /// Whether the section bounded by this separator is currently revealed.
     private(set) var isRevealed: Bool = false
 
@@ -57,9 +61,20 @@ final class Separator {
         apply()
     }
 
+    /// Update the divider icon styling from the active appearance (REQ-C19).
+    func setIcon(symbol: String, visible: Bool) {
+        iconSymbol = symbol
+        iconsVisible = visible
+        apply()
+    }
+
     private func apply() {
         statusItem.length = isRevealed ? Separator.revealedWidth : Separator.hiddenWidth
-        statusItem.button?.image = chevronImage(pointingLeft: !isRevealed)
+        statusItem.button?.image = iconsVisible ? chevronImage(pointingLeft: !isRevealed) : nil
+        // Without an icon, give the button a small visible width so it stays
+        // grabbable.
+        if !iconsVisible { statusItem.button?.title = isRevealed ? "‹" : "›" }
+        else { statusItem.button?.title = "" }
     }
 
     /// Remove the status item from the menu bar.
@@ -68,8 +83,12 @@ final class Separator {
     }
 
     private func chevronImage(pointingLeft: Bool) -> NSImage? {
-        let name = pointingLeft ? "chevron.left" : "chevron.right"
+        // Honor the configured separator symbol; fall back to a chevron whose
+        // direction reflects the revealed state.
+        let usesChevron = iconSymbol.hasPrefix("chevron")
+        let name = usesChevron ? (pointingLeft ? "chevron.left" : "chevron.right") : iconSymbol
         let image = NSImage(systemSymbolName: name, accessibilityDescription: section.displayName)
+            ?? NSImage(systemSymbolName: "chevron.left", accessibilityDescription: section.displayName)
         image?.isTemplate = true
         return image
     }
