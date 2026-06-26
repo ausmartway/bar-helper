@@ -21,6 +21,10 @@ permissions:
 jobs:
   release:
     runs-on: macos-15
+    # The `secrets` context can't be used in a step-level `if`, so surface
+    # whether the optional tap token exists as a job-level env flag.
+    env:
+      HAS_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -50,7 +54,7 @@ jobs:
       # Optional: push the version/sha256 bump into the tap repo. Requires a
       # HOMEBREW_TAP_TOKEN secret (PAT with repo scope on ausmartway/homebrew-tap).
       - name: Update tap cask
-        if: ${{ secrets.HOMEBREW_TAP_TOKEN != '' }}
+        if: ${{ env.HAS_TAP_TOKEN == 'true' }}
         env:
           GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
