@@ -56,6 +56,28 @@ and `jq`/`fx`.
 > Note: model/store logic is covered by headless unit tests; the menu-bar manipulation and SwiftUI panes
 > require a live GUI session and Screen Recording / Accessibility grants to exercise fully.
 
+### Packaging & release (REQ-C11 — Homebrew)
+
+The app ships as a notarized `.app` inside a Homebrew cask. The bundle metadata lives in `Resources/Info.plist`
+(this is the authoritative `LSUIElement` / `LSMinimumSystemVersion` source — the SwiftPM deployment target is
+deliberately lower to avoid the toolchain's 16→26 deployment-version override).
+
+```bash
+# Build dist/bar-helper.app + zip + sha256 (unsigned if no creds set)
+make app VERSION=0.1.0           # or: scripts/package-app.sh 0.1.0
+
+# Signed + notarized release (creds via env, used by CI)
+CODESIGN_IDENTITY="Developer ID Application: …" NOTARY_PROFILE=bar-helper-notary \
+  scripts/package-app.sh 0.1.0
+```
+
+- `scripts/package-app.sh` assembles the bundle, stamps the version into the plist via `PlistBuddy`, and
+  gates `codesign`/`notarytool`/`stapler` on `CODESIGN_IDENTITY` and `NOTARY_PROFILE` so it always runs.
+- `.github/workflows/release.yml` runs on a `v*` tag: tests, packages, publishes a GitHub release, and rewrites
+  `Casks/bar-helper.rb`'s `version`/`sha256`. Signing/notarization activate only when the repo secrets exist.
+- `Casks/bar-helper.rb` is the cask. Its placeholder `url`/`sha256` are inert until the first release; update
+  the GitHub org/owner in the `url`/`homepage` before publishing.
+
 ## Architecture (the big picture)
 
 The non-obvious core is **how menu-bar items get hidden**, because macOS exposes no sanctioned API for it.

@@ -33,6 +33,10 @@ To update later:
 brew upgrade --cask bar-helper
 ```
 
+> **Before the first public release:** the cask in this repo (`Casks/bar-helper.rb`) installs from a tap, e.g.
+> `brew install --cask <owner>/tap/bar-helper`. Once it's accepted into the main Homebrew cask repository, the
+> plain `brew install --cask bar-helper` above works.
+>
 > bar-helper requires macOS 16 or later. It is built and tested against the latest macOS release.
 
 ## First launch

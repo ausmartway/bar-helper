@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleName</key>
+	<string>bar-helper</string>
+	<key>CFBundleDisplayName</key>
+	<string>bar-helper</string>
+	<key>CFBundleIdentifier</key>
+	<string>app.barhelper.bar-helper</string>
+	<key>CFBundleExecutable</key>
+	<string>bar-helper</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<!-- Version values are overwritten at package time by scripts/package-app.sh. -->
+	<key>CFBundleShortVersionString</key>
+	<string>0.1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<!-- macOS 16+ baseline per docs/requirements.md (REQ-X01). -->
+	<key>LSMinimumSystemVersion</key>
+	<string>16.0</string>
+	<!-- Menu-bar agent: no Dock icon, no main window. -->
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<!-- bar-helper reads the menu-bar layout and applies styling. It does NOT
+	     record your screen. (REQ-B02: honest permission copy.) -->
+	<key>NSScreenCaptureUsageDescription</key>
+	<string>bar-helper reads your menu bar layout to hide and style items. It does not record your screen.</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>bar-helper is free and open source. No telemetry, ever.</string>
+</dict>
+</plist>

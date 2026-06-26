@@ -1,0 +1,71 @@
+# Build, sign, notarize, and publish a bar-helper release, then update the
+# Homebrew cask (REQ-C11).
+#
+# Triggered by pushing a tag like `v0.1.0`. Signing/notarization run only when
+# the corresponding repository secrets are configured; without them the job
+# still builds and uploads an unsigned artifact so the pipeline is testable.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: swift --version
+
+      - name: Test
+        run: swift test
+
+      # Import the Developer ID certificate when present (CI secret).
+      - name: Import signing certificate
+        if: ${{ secrets.MACOS_CERT_P12 != '' }}
+        env:
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+        run: |
+          echo "$MACOS_CERT_P12" | base64 --decode > /tmp/cert.p12
+          security create-keychain -p ci build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p ci build.keychain
+          security import /tmp/cert.p12 -k build.keychain -P "$MACOS_CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k ci build.keychain
+
+      - name: Store notary credentials
+        if: ${{ secrets.NOTARY_APPLE_ID != '' }}
+        run: |
+          xcrun notarytool store-credentials bar-helper-notary \
+            --apple-id "${{ secrets.NOTARY_APPLE_ID }}" \
+            --team-id "${{ secrets.NOTARY_TEAM_ID }}" \
+            --password "${{ secrets.NOTARY_PASSWORD }}"
+
+      - name: Package
+        env:
+          CODESIGN_IDENTITY: ${{ secrets.CODESIGN_IDENTITY }}
+          NOTARY_PROFILE: ${{ secrets.NOTARY_APPLE_ID != '' && 'bar-helper-notary' || '' }}
+        run: scripts/package-app.sh "${GITHUB_REF_NAME#v}"
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/bar-helper-*.zip
+            dist/bar-helper-*.zip.sha256
+
+      # Update the in-repo cask's version + checksum to match the release.
+      - name: Update cask
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          SHA="$(awk '{print $1}' dist/bar-helper-${VERSION}.zip.sha256)"
+          /usr/bin/sed -i '' -E "s/^  version \".*\"/  version \"${VERSION}\"/" Casks/bar-helper.rb
+          /usr/bin/sed -i '' -E "s/^  sha256 \".*\"/  sha256 \"${SHA}\"/" Casks/bar-helper.rb
+          echo "Updated Casks/bar-helper.rb to ${VERSION} (${SHA})"
