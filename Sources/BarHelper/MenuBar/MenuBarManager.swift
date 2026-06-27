@@ -31,6 +31,15 @@ final class MenuBarManager: ObservableObject {
     /// Hides the active app's menus when revealed items overlap them (REQ-C17).
     let appMenuManager = AppMenuManager()
 
+    /// Renders the menu-bar styling overlay (REQ-C05/C20/C21).
+    private lazy var styleManager = MenuBarStyleManager(settings: settings)
+
+    /// Renders spacers (REQ-C13) and group placeholders (REQ-C14).
+    private let spacerController = SpacerController()
+
+    /// Temporary reveal on activity (REQ-A02).
+    private let activityMonitor = ActivityMonitor()
+
     @Published private(set) var revealedSection: MenuBarSection?
 
     private var cancellables = Set<AnyCancellable>()
@@ -55,8 +64,16 @@ final class MenuBarManager: ObservableObject {
                 self?.toggle(section)
             }
         }
+        spacerController.onGroupActivated = { [weak self] section in self?.reveal(section) }
+        activityMonitor.onActivity = { [weak self] in
+            guard let self, self.settings.profile.automation.temporaryRevealOnActivity else { return }
+            self.reveal(.hidden)
+        }
+
         // Start in the tidy state: everything hidden.
         applyProfileSettings()
+        styleManager.start()
+        activityMonitor.start()
         hideAll()
         revealController.start()
 
@@ -79,10 +96,16 @@ final class MenuBarManager: ObservableObject {
             separator.setIcon(symbol: appearance.separatorIconSymbol,
                               visible: appearance.showDividerIcons)
         }
+        styleManager.refresh()
+        spacerController.sync(spacers: settings.profile.spacers,
+                              groups: settings.profile.groups)
     }
 
     func stop() {
         revealController.stop()
+        styleManager.stop()
+        activityMonitor.stop()
+        spacerController.clear()
         separators.values.forEach { $0.dispose() }
         separators.removeAll()
         controlItem?.dispose()

@@ -111,6 +111,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.perform(action)
             }
         }
+        // REQ-C16: per-item hotkeys. Without a sanctioned API to surface one
+        // specific other-app item, we reveal the section that item lives in —
+        // a temporary reveal when the user opted into that.
+        for itemHotkey in settings.profile.itemHotkeys {
+            hotkeys.register(keyCode: itemHotkey.keyCode, modifiers: itemHotkey.modifiers) { [weak self] in
+                guard let self else { return }
+                let section = self.settings.profile.section(for: itemHotkey.itemID)
+                self.menuBarManager.reveal(section == .visible ? .hidden : section)
+            }
+        }
     }
 
     private func perform(_ action: HotkeyAction) {
