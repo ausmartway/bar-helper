@@ -77,8 +77,12 @@ final class MenuBarManager: ObservableObject {
         hideAll()
         revealController.start()
 
-        // React to profile/reveal-setting changes without duplicating state.
+        // React to profile/reveal-setting changes. `objectWillChange` fires
+        // *before* the @Published value is stored, so hop to the next runloop
+        // tick to read the post-mutation profile (avoids applying one edit
+        // late).
         settings.objectWillChange
+            .receive(on: RunLoop.main)
             .sink { [weak self] in
                 self?.revealController.reloadSettings()
                 self?.applyProfileSettings()
@@ -90,7 +94,15 @@ final class MenuBarManager: ObservableObject {
     /// (REQ-C12/C17/C19).
     private func applyProfileSettings() {
         appMenuManager.isEnabled = settings.profile.hideOverlappingAppMenus
-        SpacingManager.apply(spacing: settings.profile.layout.itemSpacing)
+        // Only write the system-wide spacing override when the user actually
+        // customized it; otherwise clear any override so we don't pollute the
+        // global domain for every app (and restore it on stop()).
+        let spacing = settings.profile.layout.itemSpacing
+        if spacing == LayoutSettings.default.itemSpacing {
+            SpacingManager.reset()
+        } else {
+            SpacingManager.apply(spacing: spacing)
+        }
         let appearance = settings.profile.appearance
         for separator in separators.values {
             separator.setIcon(symbol: appearance.separatorIconSymbol,
@@ -105,6 +117,7 @@ final class MenuBarManager: ObservableObject {
         revealController.stop()
         styleManager.stop()
         activityMonitor.stop()
+        SpacingManager.reset() // don't leave a global spacing override behind
         spacerController.clear()
         separators.values.forEach { $0.dispose() }
         separators.removeAll()

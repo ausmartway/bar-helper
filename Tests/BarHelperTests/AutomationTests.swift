@@ -7,12 +7,13 @@ final class AutomationTests: XCTestCase {
     private let engine = TriggerEngine()
 
     private func context(battery: Int? = nil, charging: Bool = false,
-                         ssid: String? = nil, hour: Int = 12) -> TriggerEngine.Context {
+                         ssid: String? = nil, hour: Int = 12,
+                         focus: String? = nil, location: String? = nil) -> TriggerEngine.Context {
         var comps = DateComponents()
         comps.year = 2026; comps.month = 6; comps.day = 26; comps.hour = hour
         let date = Calendar.current.date(from: comps)!
         return TriggerEngine.Context(batteryPercent: battery, isCharging: charging,
-                                     ssid: ssid, date: date, focusModeName: nil, locationName: nil)
+                                     ssid: ssid, date: date, focusModeName: focus, locationName: location)
     }
 
     // MARK: - Trigger conditions (REQ-A01)
@@ -49,13 +50,47 @@ final class AutomationTests: XCTestCase {
         XCTAssertFalse(engine.isSatisfied(overnight, in: context(hour: 12)))
     }
 
-    func testFiredActionsRespectEnabledFlag() {
+    func testScheduleBoundariesAreHalfOpenAndRequireBothHours() {
+        let work = TriggerCondition(kind: .schedule, scheduleStartHour: 9, scheduleEndHour: 17)
+        XCTAssertTrue(engine.isSatisfied(work, in: context(hour: 9)))   // inclusive start
+        XCTAssertFalse(engine.isSatisfied(work, in: context(hour: 17))) // exclusive end
+        // Missing hours never fire.
+        let incomplete = TriggerCondition(kind: .schedule, scheduleStartHour: 9)
+        XCTAssertFalse(engine.isSatisfied(incomplete, in: context(hour: 12)))
+    }
+
+    func testBatteryBelowIsStrictAndNeedsThreshold() {
+        let cond = TriggerCondition(kind: .batteryBelow, batteryThreshold: 20)
+        XCTAssertFalse(engine.isSatisfied(cond, in: context(battery: 20))) // strict <
+        let noThreshold = TriggerCondition(kind: .batteryBelow)
+        XCTAssertFalse(engine.isSatisfied(noThreshold, in: context(battery: 5)))
+    }
+
+    func testLocationConditionMatchesCaseInsensitively() {
+        let cond = TriggerCondition(kind: .location, locationName: "Home")
+        XCTAssertTrue(engine.isSatisfied(cond, in: context(location: "home")))
+        XCTAssertFalse(engine.isSatisfied(cond, in: context(location: "Office")))
+        XCTAssertFalse(engine.isSatisfied(cond, in: context(location: nil)))
+    }
+
+    func testFocusModeConditionMatchesCaseInsensitively() {
+        let cond = TriggerCondition(kind: .focusMode, focusModeName: "Work")
+        XCTAssertTrue(engine.isSatisfied(cond, in: context(focus: "work")))
+        XCTAssertFalse(engine.isSatisfied(cond, in: context(focus: "Sleep")))
+        XCTAssertFalse(engine.isSatisfied(cond, in: context(focus: nil)))
+    }
+
+    func testFiredTriggersRespectEnabledFlagAndOrder() {
         let cond = TriggerCondition(kind: .charging)
         let on = Trigger(name: "A", enabled: true, condition: cond, action: TriggerAction(kind: .hideItems))
         let off = Trigger(name: "B", enabled: false, condition: cond, action: TriggerAction(kind: .showItems))
-        let fired = engine.firedActions(for: [on, off], in: context(charging: true))
-        XCTAssertEqual(fired.count, 1)
-        XCTAssertEqual(fired.first?.kind, .hideItems)
+        let also = Trigger(name: "C", enabled: true, condition: cond, action: TriggerAction(kind: .showItems))
+        let fired = engine.firedTriggers(for: [on, off, also], in: context(charging: true))
+        // Disabled trigger excluded; order preserved.
+        XCTAssertEqual(fired.map(\.name), ["A", "C"])
+        XCTAssertEqual(fired.first?.action.kind, .hideItems)
+        // Empty input → empty output.
+        XCTAssertTrue(engine.firedTriggers(for: [], in: context(charging: true)).isEmpty)
     }
 
     // MARK: - URL scheme (REQ-A03)
@@ -88,6 +123,38 @@ final class AutomationTests: XCTestCase {
         switchedTo = nil
         handler.dispatch(URL(string: "https://example.com/profile?name=X")!)
         XCTAssertNil(switchedTo)
+    }
+
+    func testURLSchemeFallbacksAndMalformedInput() {
+        var revealed: MenuBarSection?
+        var toggled: MenuBarSection?
+        var switchedTo: String?
+        var hideCount = 0
+        let handler = URLSchemeHandler(commands: URLSchemeHandler.Commands(
+            reveal: { revealed = $0 },
+            hide: { hideCount += 1 },
+            toggle: { toggled = $0 },
+            switchProfile: { switchedTo = $0 }
+        ))
+
+        // Missing section defaults to .hidden for show and toggle.
+        handler.dispatch(URL(string: "barhelper://show")!)
+        XCTAssertEqual(revealed, .hidden)
+        handler.dispatch(URL(string: "barhelper://toggle")!)
+        XCTAssertEqual(toggled, .hidden)
+
+        // Invalid section value falls back to .hidden, not a crash.
+        revealed = nil
+        handler.dispatch(URL(string: "barhelper://show?section=bogus")!)
+        XCTAssertEqual(revealed, .hidden)
+
+        // profile without a name does nothing.
+        handler.dispatch(URL(string: "barhelper://profile")!)
+        XCTAssertNil(switchedTo)
+
+        // Unknown host fires no command.
+        handler.dispatch(URL(string: "barhelper://frobnicate")!)
+        XCTAssertEqual(hideCount, 0)
     }
 
     // MARK: - Extended model (REQ-C12..C21)

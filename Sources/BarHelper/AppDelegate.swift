@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 
 /// Wires together the subsystems that make up bar-helper and owns their
 /// lifetime. Kept deliberately thin: it constructs the collaborators and
@@ -28,6 +29,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private let triggerEngine = TriggerEngine()
     private var triggerTimer: Timer?
+    /// Triggers satisfied on the previous tick — used for false→true edge
+    /// detection so a steadily-true trigger fires once, not every 30s.
+    private var lastFiredTriggerIDs: Set<UUID> = []
+    private var lastHotkeySignature = 0
+
+    private var cancellables = Set<AnyCancellable>()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // REQ-B01: bar-helper ships no analytics. This call documents and
@@ -41,6 +48,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuBarManager.onOpenSettings = { [weak self] in self?.openSettings() }
         menuBarManager.start()
         registerGlobalHotkeys()
+        observeHotkeyChanges()
 
         // Keep login-item registration in sync with the user's preference.
         LaunchAtLogin.shared.synchronize(enabled: settings.profile.launchAtLogin)
@@ -81,21 +89,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func evaluateTriggers() {
         let triggers = settings.profile.triggers
-        guard !triggers.isEmpty else { return }
+        guard !triggers.isEmpty else { lastFiredTriggerIDs = []; return }
         let context = SystemState.liveContext()
-        for action in triggerEngine.firedActions(for: triggers, in: context) {
-            apply(action)
+        let fired = triggerEngine.firedTriggers(for: triggers, in: context)
+        let firedIDs = Set(fired.map(\.id))
+
+        // Only act on triggers that just became satisfied (false→true edge), so
+        // a steadily-true trigger doesn't re-fire every tick.
+        for trigger in fired where !lastFiredTriggerIDs.contains(trigger.id) {
+            apply(trigger.action)
         }
+        lastFiredTriggerIDs = firedIDs
     }
 
     private func apply(_ action: TriggerAction) {
         switch action.kind {
         case .showItems:
-            settings.update { profile in
+            // Automated edits skip undo history so triggers don't flood it.
+            settings.update(recordHistory: false) { profile in
                 for item in action.itemIDs { profile.sectionAssignments[item] = .visible }
             }
         case .hideItems:
-            settings.update { profile in
+            settings.update(recordHistory: false) { profile in
                 for item in action.itemIDs { profile.sectionAssignments[item] = .hidden }
             }
         case .switchProfile:
@@ -105,7 +120,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Hotkeys (REQ-C07 / REQ-C18)
 
+    /// Re-register hotkeys when the profile's bindings change, so edits in
+    /// settings take effect without a relaunch.
+    private func observeHotkeyChanges() {
+        settings.objectWillChange
+            .receive(on: RunLoop.main)
+            .sink { [weak self] in
+                guard let self else { return }
+                let signature = self.hotkeySignature()
+                if signature != self.lastHotkeySignature {
+                    self.lastHotkeySignature = signature
+                    self.hotkeys.unregisterAll()
+                    self.registerGlobalHotkeys()
+                }
+            }
+            .store(in: &cancellables)
+    }
+
+    /// A cheap fingerprint of the bindings so we only re-register on real
+    /// hotkey changes, not every settings tweak.
+    private func hotkeySignature() -> Int {
+        var hasher = Hasher()
+        for b in settings.profile.hotkeys { hasher.combine(b.action); hasher.combine(b.keyCode); hasher.combine(b.modifiers) }
+        for h in settings.profile.itemHotkeys { hasher.combine(h.itemID); hasher.combine(h.keyCode); hasher.combine(h.modifiers) }
+        return hasher.finalize()
+    }
+
     private func registerGlobalHotkeys() {
+        lastHotkeySignature = hotkeySignature()
         for binding in settings.profile.hotkeys {
             hotkeys.register(binding) { [weak self] action in
                 self?.perform(action)

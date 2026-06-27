@@ -35,6 +35,37 @@ struct Appearance: Codable, Equatable {
             backgroundRemoval: false
         )
     }
+
+    // Memberwise init is synthesized and used by `Appearance.default`.
+    init(tint: RGBAColor?, hasBorder: Bool, borderColor: RGBAColor, hasShadow: Bool,
+         cornerRadius: Double, separatorIconSymbol: String, showDividerIcons: Bool,
+         roundedScreenCorners: Bool, backgroundRemoval: Bool) {
+        self.tint = tint
+        self.hasBorder = hasBorder
+        self.borderColor = borderColor
+        self.hasShadow = hasShadow
+        self.cornerRadius = cornerRadius
+        self.separatorIconSymbol = separatorIconSymbol
+        self.showDividerIcons = showDividerIcons
+        self.roundedScreenCorners = roundedScreenCorners
+        self.backgroundRemoval = backgroundRemoval
+    }
+
+    /// Back-compatible decoder: the styling fields added after v1 fall back to
+    /// their defaults when an older payload omits them.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let d = Appearance.default
+        tint = try c.decodeIfPresent(RGBAColor.self, forKey: .tint)
+        hasBorder = try c.decodeIfPresent(Bool.self, forKey: .hasBorder) ?? d.hasBorder
+        borderColor = try c.decodeIfPresent(RGBAColor.self, forKey: .borderColor) ?? d.borderColor
+        hasShadow = try c.decodeIfPresent(Bool.self, forKey: .hasShadow) ?? d.hasShadow
+        cornerRadius = try c.decodeIfPresent(Double.self, forKey: .cornerRadius) ?? d.cornerRadius
+        separatorIconSymbol = try c.decodeIfPresent(String.self, forKey: .separatorIconSymbol) ?? d.separatorIconSymbol
+        showDividerIcons = try c.decodeIfPresent(Bool.self, forKey: .showDividerIcons) ?? d.showDividerIcons
+        roundedScreenCorners = try c.decodeIfPresent(Bool.self, forKey: .roundedScreenCorners) ?? d.roundedScreenCorners
+        backgroundRemoval = try c.decodeIfPresent(Bool.self, forKey: .backgroundRemoval) ?? d.backgroundRemoval
+    }
 }
 
 /// A serializable color. Kept separate from AppKit so the model layer stays

@@ -110,6 +110,8 @@ struct AutomationSettings: Codable, Equatable {
     var urlSchemeEnabled: Bool
 
     static var `default`: AutomationSettings {
-        AutomationSettings(temporaryRevealOnActivity: true, urlSchemeEnabled: true)
+        // Activity-reveal defaults OFF: revealing on every app activation is
+        // intrusive, so it's opt-in (REQ-A02).
+        AutomationSettings(temporaryRevealOnActivity: false, urlSchemeEnabled: true)
     }
 }

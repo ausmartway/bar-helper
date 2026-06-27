@@ -64,12 +64,13 @@ final class AppMenuManager {
         let axApp = AXUIElementCreateApplication(app.processIdentifier)
         var menuBarRef: CFTypeRef?
         guard AXUIElementCopyAttributeValue(axApp, kAXMenuBarAttribute as CFString, &menuBarRef) == .success,
-              let menuBar = menuBarRef else { return nil }
+              let menuBarValue = menuBarRef,
+              CFGetTypeID(menuBarValue) == AXUIElementGetTypeID() else { return nil }
+        let menuBar = menuBarValue as! AXUIElement // safe: type-id checked above
 
-        // `menuBar` is an AXUIElement; fetch its children (the menu titles).
+        // Fetch the menu bar's children (the menu titles).
         var childrenRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(menuBar as! AXUIElement,
-                                            kAXChildrenAttribute as CFString,
+        guard AXUIElementCopyAttributeValue(menuBar, kAXChildrenAttribute as CFString,
                                             &childrenRef) == .success,
               let children = childrenRef as? [AXUIElement] else { return nil }
 
@@ -77,9 +78,10 @@ final class AppMenuManager {
         for child in children {
             var sizeRef: CFTypeRef?
             guard AXUIElementCopyAttributeValue(child, kAXSizeAttribute as CFString, &sizeRef) == .success,
-                  let sizeValue = sizeRef else { continue }
+                  let sizeValue = sizeRef,
+                  CFGetTypeID(sizeValue) == AXValueGetTypeID() else { continue }
             var size = CGSize.zero
-            if AXValueGetValue(sizeValue as! AXValue, .cgSize, &size) {
+            if AXValueGetValue(sizeValue as! AXValue, .cgSize, &size) { // safe: type-id checked
                 total += size.width
             }
         }

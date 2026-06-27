@@ -52,12 +52,16 @@ final class SettingsStore: ObservableObject {
 
     /// Replace the active profile and persist. The single write path keeps the
     /// store consistent and is where undo history is captured (REQ-I03).
-    func update(_ transform: (inout Profile) -> Void) {
+    ///
+    /// `recordHistory: false` skips the undo snapshot — used for automated
+    /// (trigger-driven) edits so steadily-true triggers don't flood the undo
+    /// stack with identical states.
+    func update(recordHistory: Bool = true, _ transform: (inout Profile) -> Void) {
         guard let index = profiles.firstIndex(where: { $0.id == activeProfileID }) else { return }
         var copy = profiles[index]
         transform(&copy)
         guard copy != profiles[index] else { return } // no-op edits don't pollute history
-        captureHistory()
+        if recordHistory { captureHistory() }
         profiles[index] = copy
         persist()
     }

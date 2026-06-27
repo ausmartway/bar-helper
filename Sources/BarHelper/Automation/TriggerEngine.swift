@@ -19,11 +19,11 @@ struct TriggerEngine {
         var locationName: String?
     }
 
-    /// Returns the actions whose (enabled) triggers are currently satisfied.
-    func firedActions(for triggers: [Trigger], in context: Context) -> [TriggerAction] {
-        triggers
-            .filter { $0.enabled && isSatisfied($0.condition, in: context) }
-            .map { $0.action }
+    /// Returns the (enabled) triggers currently satisfied, in declaration
+    /// order. The full trigger is returned — not just its action — so callers
+    /// can do edge detection by id and avoid re-firing a steadily-true trigger.
+    func firedTriggers(for triggers: [Trigger], in context: Context) -> [Trigger] {
+        triggers.filter { $0.enabled && isSatisfied($0.condition, in: context) }
     }
 
     /// Pure condition test. Exposed for unit testing.

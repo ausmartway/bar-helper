@@ -2,6 +2,18 @@ import SwiftUI
 import AppKit
 import Carbon.HIToolbox
 
+extension SettingsStore {
+    /// A two-way binding to a field on the active profile that routes writes
+    /// through `update`, the single source of truth. Removes the repeated
+    /// `Binding(get:set:)` boilerplate across the settings panes.
+    func binding<Value>(_ keyPath: WritableKeyPath<Profile, Value>) -> Binding<Value> {
+        Binding(
+            get: { self.profile[keyPath: keyPath] },
+            set: { newValue in self.update { $0[keyPath: keyPath] = newValue } }
+        )
+    }
+}
+
 /// The settings window. One tab per area of the spec. All edits flow through
 /// `SettingsStore.update`, the single write path, so the AppKit menu-bar
 /// controller and this UI never diverge.
@@ -125,10 +137,7 @@ private struct GeneralPane: View {
     }
 
     private func bind<Value>(_ keyPath: WritableKeyPath<Profile, Value>) -> Binding<Value> {
-        Binding(
-            get: { settings.profile[keyPath: keyPath] },
-            set: { newValue in settings.update { $0[keyPath: keyPath] = newValue } }
-        )
+        settings.binding(keyPath)
     }
 }
 
@@ -272,10 +281,7 @@ private struct AppearancePane: View {
     }
 
     private func bind<Value>(_ keyPath: WritableKeyPath<Profile, Value>) -> Binding<Value> {
-        Binding(
-            get: { settings.profile[keyPath: keyPath] },
-            set: { newValue in settings.update { $0[keyPath: keyPath] = newValue } }
-        )
+        settings.binding(keyPath)
     }
 }
 

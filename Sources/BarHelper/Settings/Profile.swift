@@ -55,6 +55,55 @@ struct Profile: Codable, Identifiable, Equatable {
     /// mapping is a follow-up; this flag gates the behavior.
     var perDisplayStyling: Bool = false
 
+    // Memberwise init is synthesized and used by `Profile.default`.
+    init(id: UUID, name: String, sectionAssignments: [String: MenuBarSection],
+         reveal: RevealSettings, appearance: Appearance, hotkeys: [HotkeyBinding],
+         launchAtLogin: Bool, layout: LayoutSettings = .default,
+         spacers: [MenuBarSpacer] = [], groups: [ItemGroup] = [],
+         itemHotkeys: [ItemHotkey] = [], triggers: [Trigger] = [],
+         automation: AutomationSettings = .default, hideOverlappingAppMenus: Bool = false,
+         darkAppearance: Appearance? = nil, perDisplayStyling: Bool = false) {
+        self.id = id
+        self.name = name
+        self.sectionAssignments = sectionAssignments
+        self.reveal = reveal
+        self.appearance = appearance
+        self.hotkeys = hotkeys
+        self.launchAtLogin = launchAtLogin
+        self.layout = layout
+        self.spacers = spacers
+        self.groups = groups
+        self.itemHotkeys = itemHotkeys
+        self.triggers = triggers
+        self.automation = automation
+        self.hideOverlappingAppMenus = hideOverlappingAppMenus
+        self.darkAppearance = darkAppearance
+        self.perDisplayStyling = perDisplayStyling
+    }
+
+    /// Back-compatible decoder: fields added after v1 fall back to their
+    /// defaults when absent, so a profile persisted by an older build still
+    /// loads instead of being silently discarded.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        sectionAssignments = try c.decode([String: MenuBarSection].self, forKey: .sectionAssignments)
+        reveal = try c.decode(RevealSettings.self, forKey: .reveal)
+        appearance = try c.decode(Appearance.self, forKey: .appearance)
+        hotkeys = try c.decode([HotkeyBinding].self, forKey: .hotkeys)
+        launchAtLogin = try c.decode(Bool.self, forKey: .launchAtLogin)
+        layout = try c.decodeIfPresent(LayoutSettings.self, forKey: .layout) ?? .default
+        spacers = try c.decodeIfPresent([MenuBarSpacer].self, forKey: .spacers) ?? []
+        groups = try c.decodeIfPresent([ItemGroup].self, forKey: .groups) ?? []
+        itemHotkeys = try c.decodeIfPresent([ItemHotkey].self, forKey: .itemHotkeys) ?? []
+        triggers = try c.decodeIfPresent([Trigger].self, forKey: .triggers) ?? []
+        automation = try c.decodeIfPresent(AutomationSettings.self, forKey: .automation) ?? .default
+        hideOverlappingAppMenus = try c.decodeIfPresent(Bool.self, forKey: .hideOverlappingAppMenus) ?? false
+        darkAppearance = try c.decodeIfPresent(Appearance.self, forKey: .darkAppearance)
+        perDisplayStyling = try c.decodeIfPresent(Bool.self, forKey: .perDisplayStyling) ?? false
+    }
+
     func section(for itemID: String) -> MenuBarSection {
         sectionAssignments[itemID] ?? .visible
     }
